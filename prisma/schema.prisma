@@ -1,0 +1,341 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Core application models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(CLIENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Application relations
+  freelancerProfile   FreelancerProfile?
+  clientMeetings      Meeting[]            @relation("ClientMeetings")
+  freelancerMeetings  Meeting[]            @relation("FreelancerMeetings")
+  sentMessages        Message[]            @relation("SentMessages")
+  uploadedFiles       File[]
+  givenReviews        Review[]             @relation("GivenReviews")
+  receivedReviews     Review[]             @relation("ReceivedReviews")
+  clientPayments      Payment[]            @relation("ClientPayments")
+  freelancerPayments  Payment[]            @relation("FreelancerPayments")
+  notifications       Notification[]
+  clientDecisions     FreelancerDecision[] @relation("ClientDecisions")
+  freelancerDecisions FreelancerDecision[] @relation("FreelancerDecisions")
+  clientProjects      Project[]            @relation("ClientProjects")
+  freelancerProjects  Project[]            @relation("FreelancerProjects")
+  verification        UserVerification?
+  raisedDisputes      Dispute[]            @relation("RaisedDisputes")
+}
+
+model FreelancerProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  title        String
+  description  String
+  hourlyRate   Float
+  skills       String // JSON string of skill tags for SQLite
+  experience   String
+  portfolio    String? // JSON string of portfolio items
+  integrations String? // JSON string of platform integrations
+  availability String? // JSON string for availability settings
+  calLink      String? // Cal.com username or link
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Meeting {
+  id           String        @id @default(cuid())
+  clientId     String
+  freelancerId String
+  title        String
+  description  String?
+  scheduledAt  DateTime
+  duration     Int // Duration in minutes
+  status       MeetingStatus @default(PENDING)
+  type         MeetingType   @default(REGULAR)
+  meetingUrl   String? // For video call links
+  notes        String?
+  clientDecision String? // APPROVED, REJECTED, PENDING (for discovery meetings)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  client     User      @relation("ClientMeetings", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancer User      @relation("FreelancerMeetings", fields: [freelancerId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  files      File[]
+  review     Review?
+  payments   Payment[]
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  meetingId String?  // Optional for project messages
+  projectId String?  // For project meetboard messages
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sender  User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model File {
+  id           String   @id @default(cuid())
+  meetingId    String
+  uploaderId   String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  createdAt    DateTime @default(now())
+
+  meeting  Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  meetingId  String   @unique
+  reviewerId String
+  revieweeId String
+  rating     Int // 1-5 stars
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  meeting  Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  reviewer User    @relation("GivenReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee User    @relation("ReceivedReviews", fields: [revieweeId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  meetingId    String? // Optional - for meeting-based payments
+  projectId    String? // Optional - for project-based payments
+  milestoneId  String? // Optional - for milestone-based payments
+  clientId     String
+  freelancerId String
+  amount       Float
+  status       PaymentStatus @default(PENDING)
+  description  String?
+  escrowedAt   DateTime? // When payment was escrowed
+  releasedAt   DateTime? // When payment was released
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  meeting    Meeting?   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  project    Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone  Milestone? @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  client     User       @relation("ClientPayments", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancer User       @relation("FreelancerPayments", fields: [freelancerId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String // meeting_request, payment, review, etc.
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FreelancerDecision {
+  id             String   @id @default(cuid())
+  clientId       String
+  freelancerId   String
+  decision       String // "approve" or "reject"
+  feedback       String?
+  projectDetails String? // JSON string with project info
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  client     User @relation("ClientDecisions", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancer User @relation("FreelancerDecisions", fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, freelancerId])
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  clientId     String
+  freelancerId String
+  title        String
+  description  String
+  totalAmount  Float
+  currency     String        @default("USD")
+  status       ProjectStatus @default(DRAFT)
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  client     User        @relation("ClientProjects", fields: [clientId], references: [id], onDelete: Cascade)
+  freelancer User        @relation("FreelancerProjects", fields: [freelancerId], references: [id], onDelete: Cascade)
+  milestones Milestone[]
+  payments   Payment[]
+  disputes   Dispute[]
+  messages   Message[]
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  projectId   String
+  title       String
+  description String
+  amount      Float
+  dueDate     DateTime?
+  status      MilestoneStatus @default(PENDING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  payments Payment[]
+}
+
+model UserVerification {
+  id                String             @id @default(cuid())
+  userId            String             @unique
+  idVerification    VerificationStatus @default(UNVERIFIED)
+  emailVerified     Boolean            @default(false)
+  phoneVerified     Boolean            @default(false)
+  portfolioVerified Boolean            @default(false)
+  backgroundCheck   VerificationStatus @default(UNVERIFIED)
+  verifiedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Dispute {
+  id          String    @id @default(cuid())
+  projectId   String
+  raisedBy    String // User ID who raised the dispute
+  reason      String
+  description String
+  evidence    String? // JSON string of evidence files/links
+  status      String    @default("OPEN") // OPEN, IN_REVIEW, RESOLVED, CLOSED
+  resolution  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  raiser  User    @relation("RaisedDisputes", fields: [raisedBy], references: [id], onDelete: Cascade)
+}
+
+// Enums
+enum UserRole {
+  CLIENT
+  FREELANCER
+}
+
+enum MeetingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  AWAITING_CLIENT_DECISION
+  CLIENT_APPROVED
+  CLIENT_REJECTED
+}
+
+enum MeetingType {
+  REGULAR
+  DISCOVERY
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  DISPUTED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  ESCROWED
+  RELEASED
+  DISPUTED
+}
