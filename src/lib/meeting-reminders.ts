@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma"
 import nodemailer from "nodemailer"
 
 // Email configuration (you'll need to set up your email service)
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: 587,
   secure: false,
