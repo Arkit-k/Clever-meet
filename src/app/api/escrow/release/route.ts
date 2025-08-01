@@ -4,9 +4,15 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import Stripe from "stripe"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-})
+// Initialize Stripe only when needed
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not configured")
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2024-06-20",
+  })
+}
 
 // Release escrow payment to freelancer after milestone approval
 export async function POST(request: NextRequest) {
