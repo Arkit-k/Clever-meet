@@ -158,7 +158,7 @@ export async function PATCH(
     }
 
     // Only allow certain updates based on user role
-    const allowedUpdates: any = {}
+    const allowedUpdates: Record<string, unknown> = {}
 
     if (session.user.role === "CLIENT") {
       // Clients can update project status (approve/reject)

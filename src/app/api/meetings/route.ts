@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate meeting link
-    const meetingLink = generateMeetingLink(`temp-${Date.now()}`, title)
+    const meetingLink = generateMeetingLink(`temp-${Date.now()}`)
 
     const meeting = await prisma.meeting.create({
       data: {
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Update meeting link with actual meeting ID
-    const finalMeetingLink = generateMeetingLink(meeting.id, title)
+    const finalMeetingLink = generateMeetingLink(meeting.id)
     await prisma.meeting.update({
       where: { id: meeting.id },
       data: { meetingUrl: finalMeetingLink }

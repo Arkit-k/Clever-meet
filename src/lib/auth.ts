@@ -4,9 +4,10 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import EmailProvider from "next-auth/providers/email"
 import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
+import type { Adapter } from "next-auth/adapters"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -84,6 +85,5 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
   },
 }

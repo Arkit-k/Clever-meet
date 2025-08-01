@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { createNotification } from "@/lib/notifications"
 
 // Generate meeting links (you can integrate with Zoom, Whereby, etc.)
-export function generateMeetingLink(meetingId: string, meetingTitle: string): string {
+export function generateMeetingLink(meetingId: string): string {
   // For MVP, we'll use a simple meeting room URL
   // In production, integrate with Zoom API, Whereby API, etc.
 
@@ -52,10 +52,30 @@ export async function scheduleMeetingReminders(meetingId: string) {
   }
 }
 
+// Define meeting type for type safety
+interface MeetingWithParticipants {
+  id: string
+  title: string
+  scheduledAt: Date
+  meetingUrl?: string | null
+  clientId: string
+  freelancerId: string
+  client: {
+    id: string
+    name: string | null
+    email: string
+  }
+  freelancer: {
+    id: string
+    name: string | null
+    email: string
+  }
+}
+
 // Send meeting reminder with link
-async function sendMeetingReminder(meeting: any) {
+async function sendMeetingReminder(meeting: MeetingWithParticipants) {
   try {
-    const meetingLink = meeting.meetingUrl || generateMeetingLink(meeting.id, meeting.title)
+    const meetingLink = meeting.meetingUrl || generateMeetingLink(meeting.id)
     const meetingTime = new Date(meeting.scheduledAt).toLocaleString()
 
     // Send to client
@@ -118,7 +138,7 @@ export async function checkUpcomingMeetings() {
 // Update meeting with generated link
 export async function updateMeetingWithLink(meetingId: string, title: string) {
   try {
-    const meetingLink = generateMeetingLink(meetingId, title)
+    const meetingLink = generateMeetingLink(meetingId)
     
     await prisma.meeting.update({
       where: { id: meetingId },

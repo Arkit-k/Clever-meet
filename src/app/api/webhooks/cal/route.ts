@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         uid,
         title,
         organizer: organizer?.email,
-        attendees: attendees?.map(a => a.email)
+        attendees: attendees?.map((a: { email: string }) => a.email)
       })
 
       // Find the freelancer by Cal.com email
@@ -164,8 +164,8 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to verify webhook signature (implement in production)
-function verifySignature(payload: any, signature: string | null): boolean {
-  // Implement Cal.com webhook signature verification
-  // This is crucial for security in production
-  return true // For MVP, we'll skip verification
-}
+// function verifySignature(payload: unknown, signature: string | null): boolean {
+//   // Implement Cal.com webhook signature verification
+//   // This is crucial for security in production
+//   return true // For MVP, we'll skip verification
+// }

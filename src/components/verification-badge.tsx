@@ -1,8 +1,23 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Award, CheckCircle } from "lucide-react"
+import { Award } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+interface PortfolioItem {
+  id: string
+  title: string
+  description?: string
+  url?: string
+  imageUrl?: string
+}
+
+interface Integration {
+  id: string
+  name: string
+  type: string
+  connected: boolean
+}
 
 interface FreelancerProfile {
   title?: string
@@ -10,8 +25,8 @@ interface FreelancerProfile {
   hourlyRate?: number
   skills?: string[]
   experience?: string
-  portfolio?: any[]
-  integrations?: any[]
+  portfolio?: PortfolioItem[]
+  integrations?: Integration[]
   calLink?: string
 }
 

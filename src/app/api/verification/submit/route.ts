@@ -16,9 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      verificationType,
-      documents,
-      personalInfo
+      verificationType
     } = await request.json()
 
     // Find or create user verification record
